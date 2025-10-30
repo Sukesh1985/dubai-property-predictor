@@ -106,7 +106,7 @@ streamlit run app.py
 **Sukesh**
 - Data Scientist | ML Engineer
 - [GitHub](https://github.com/Sukesh1985)
-- [LinkedIn](linkedin.com/in/sukesh-singla-667701a5)
+- [LinkedIn](https://linkedin.com/in/sukesh-singla-667701a5)
 
 ## 🙏 Acknowledgments
 
