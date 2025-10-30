@@ -186,11 +186,11 @@ if page == "🏡 Price Prediction":
             st.plotly_chart(fig_gauge, use_container_width=True)
         else:
             st.metric("Property Value", f"AED {prediction:,.0f}")
-            st.info("Install Plotly to see the interactive gauge chart")
         
         # Property Summary
         st.markdown("---")
         st.subheader("📋 Property Summary")
+	st.info("💡 Property value calculated based on market data")
         
         col1, col2 = st.columns(2)
         
