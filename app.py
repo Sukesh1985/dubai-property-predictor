@@ -155,8 +155,14 @@ if page == "🏡 Price Prediction":
                 percentage = (value / prediction) * 100
                 st.write(f"**{component}:** AED {value:,.0f} ({percentage:.0f}%)")
     
-    with col2:
-        st.subheader("🎯 Property Value Indicator")
+        with col2:
+            st.subheader("🎯 Key Metrics")
+            lower = prediction * 0.9
+            upper = prediction * 1.1
+            st.metric("Lower Estimate", f"AED {lower:,.0f}")
+            st.metric("Predicted Value", f"AED {prediction:,.0f}")
+            st.metric("Upper Estimate", f"AED {upper:,.0f}")
+            st.info("Price range based on market analysis")
         
         if PLOTLY_AVAILABLE:
             fig_gauge = go.Figure(go.Indicator(
@@ -190,7 +196,7 @@ if page == "🏡 Price Prediction":
         # Property Summary
         st.markdown("---")
         st.subheader("📋 Property Summary")
-	st.info("💡 Property value calculated based on market data")
+    	st.info("💡 Property value calculated based on market data")
         
         col1, col2 = st.columns(2)
         
