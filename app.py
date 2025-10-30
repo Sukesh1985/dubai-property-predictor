@@ -4,9 +4,13 @@ import numpy as np
 import pickle
 import os
 import urllib.request
-import plotly.graph_objects as go
-import plotly.express as px
-PLOTLY_AVAILABLE = True
+# Plotly is optional
+try:
+    import plotly.graph_objects as go
+    import plotly.express as px
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
 
 # Page config
 st.set_page_config(
