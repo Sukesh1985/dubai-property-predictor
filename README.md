@@ -108,6 +108,10 @@ streamlit run app.py
 - [GitHub](https://github.com/Sukesh1985)
 - [LinkedIn](https://linkedin.com/in/sukesh-singla-667701a5)
 
+## 📄 License
+
+This project is open source and available under the MIT License.
+
 ## 🙏 Acknowledgments
 
 Built with ❤️ using Streamlit and Python
