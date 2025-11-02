@@ -15,14 +15,6 @@ st.set_page_config(
     }
 )
 
-st.sidebar.title("⚙️ Settings")
-theme = st.sidebar.radio("🎨 Theme", ["Light", "Dark"], horizontal=True)
-
-if theme == "Dark":
-    st.markdown("""<style>.main {padding: 0rem 1rem; background-color: #0e1117;} h1, h2, h3 {color: #fafafa !important;} .stMetric {background: linear-gradient(135deg, #1f4788 0%, #2c5aa0 100%); padding: 15px; border-radius: 10px;} .stButton>button {background: linear-gradient(135deg, #1f4788 0%, #2c5aa0 100%); color: white;}</style>""", unsafe_allow_html=True)
-else:
-    st.markdown("""<style>.main {padding: 0rem 1rem;} h1 {color: #1f4788 !important;} .stMetric {background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 15px; border-radius: 10px;} .stButton>button {background: linear-gradient(135deg, #1f4788 0%, #2c5aa0 100%); color: white; border-radius: 8px;}</style>""", unsafe_allow_html=True)
-
 st.markdown("<h1 style='text-align: center;'>🏠 Dubai Real Estate Price Predictor</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align: center; color: #666;'>AI-Powered Property Valuation Tool</h3>", unsafe_allow_html=True)
 st.markdown("---")
