@@ -1,279 +1,377 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import pickle
+import plotly.express as px
+import plotly.graph_objects as go
 
+# Page config
 st.set_page_config(
     page_title="Dubai Property Price Predictor",
     page_icon="🏠",
     layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': 'https://github.com/Sukesh1985/dubai-property-predictor',
-        'Report a bug': 'https://github.com/Sukesh1985/dubai-property-predictor/issues',
-        'About': 'Dubai Real Estate Price Predictor - Built with ❤️ by Sukesh'
-    }
+    initial_sidebar_state="expanded"
 )
 
-st.sidebar.title("⚙️ Settings")
-theme = st.sidebar.radio("🎨 Theme", ["Light", "Dark"], horizontal=True)
+# Initialize dark mode in session state
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = True
 
-if theme == "Dark":
-    st.markdown("""<style>.main {padding: 0rem 1rem; background-color: #0e1117;} h1, h2, h3 {color: #fafafa !important;} .stMetric {background: linear-gradient(135deg, #1f4788 0%, #2c5aa0 100%); padding: 15px; border-radius: 10px;} .stButton>button {background: linear-gradient(135deg, #1f4788 0%, #2c5aa0 100%); color: white;}</style>""", unsafe_allow_html=True)
-else:
-    st.markdown("""<style>.main {padding: 0rem 1rem;} h1 {color: #1f4788 !important;} .stMetric {background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 15px; border-radius: 10px;} .stButton>button {background: linear-gradient(135deg, #1f4788 0%, #2c5aa0 100%); color: white; border-radius: 8px;}</style>""", unsafe_allow_html=True)
-
-st.markdown("<h1 style='text-align: center;'>🏠 Dubai Real Estate Price Predictor</h1>", unsafe_allow_html=True)
-st.markdown("<h3 style='text-align: center; color: #666;'>AI-Powered Property Valuation Tool</h3>", unsafe_allow_html=True)
-st.markdown("---")
-
-st.sidebar.markdown("---")
-st.sidebar.title("🎯 Navigation")
-page = st.sidebar.radio("Choose a feature:", ["🏡 Price Prediction", "📊 Compare Properties", "📈 Market Insights", "ℹ️ About"], label_visibility="collapsed")
-st.sidebar.markdown("---")
-
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    st.metric("🌐 Status", "Live")
-with col2:
-    st.metric("📊 Version", "4.0")
-
-st.sidebar.info("💡 Tip: Use dark mode for better viewing at night!")
-
-def calculate_price(location, property_type, bedrooms, bathrooms, area, parking, has_pool, has_gym, has_security, has_balcony):
-    base_price = 1000000
-    location_multiplier = {"Downtown Dubai": 1.5, "Dubai Marina": 1.3, "Palm Jumeirah": 1.8, "Business Bay": 1.4, "JBR": 1.3, "Arabian Ranches": 1.2}
-    type_multiplier = {"Apartment": 1.0, "Villa": 1.5, "Townhouse": 1.2, "Penthouse": 1.8}
-    amenity_bonus = 0
-    if has_pool: amenity_bonus += 0.05
-    if has_gym: amenity_bonus += 0.03
-    if has_security: amenity_bonus += 0.02
-    if has_balcony: amenity_bonus += 0.02
-    prediction = (base_price * location_multiplier.get(location, 1.0) * type_multiplier.get(property_type, 1.0) * (area / 1500) * (bedrooms * 0.3 + 0.7) * (1 + amenity_bonus))
-    return prediction
-
-def get_price_indicator(price):
-    if price < 1500000:
-        return "🟢 Affordable", "#4caf50"
-    elif price < 3000000:
-        return "🟡 Moderate", "#ff9800"
+# CSS for BOTH themes with proper toggle
+def apply_theme():
+    if st.session_state.dark_mode:
+        # DARK THEME
+        st.markdown("""
+            <style>
+            /* Dark Theme */
+            .stApp {
+                background-color: #0e1117 !important;
+            }
+            .stApp > header {
+                background-color: #0e1117 !important;
+            }
+            [data-testid="stSidebar"] {
+                background-color: #262730 !important;
+            }
+            [data-testid="stSidebar"] > div:first-child {
+                background-color: #262730 !important;
+            }
+            p, h1, h2, h3, h4, h5, h6, span, div, label {
+                color: #fafafa !important;
+            }
+            [data-testid="stMetricValue"] {
+                color: #fafafa !important;
+            }
+            [data-testid="stMetricLabel"] {
+                color: #fafafa !important;
+            }
+            .stMarkdown {
+                color: #fafafa !important;
+            }
+            input, select, textarea {
+                background-color: #262730 !important;
+                color: #fafafa !important;
+                border: 1px solid #444 !important;
+            }
+            [data-baseweb="select"] {
+                background-color: #262730 !important;
+            }
+            [data-baseweb="base-input"] {
+                background-color: #262730 !important;
+            }
+            .stButton button {
+                background-color: #1f4788 !important;
+                color: white !important;
+                border: none !important;
+            }
+            .stButton button:hover {
+                background-color: #2c5aa0 !important;
+            }
+            /* Plotly dark theme */
+            .js-plotly-plot {
+                background-color: #0e1117 !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
     else:
-        return "🔴 Premium", "#f44336"
+        # LIGHT THEME
+        st.markdown("""
+            <style>
+            /* Light Theme */
+            .stApp {
+                background-color: #ffffff !important;
+            }
+            .stApp > header {
+                background-color: #ffffff !important;
+            }
+            [data-testid="stSidebar"] {
+                background-color: #f0f2f6 !important;
+            }
+            [data-testid="stSidebar"] > div:first-child {
+                background-color: #f0f2f6 !important;
+            }
+            p, h1, h2, h3, h4, h5, h6, span, div, label {
+                color: #262730 !important;
+            }
+            [data-testid="stMetricValue"] {
+                color: #262730 !important;
+            }
+            [data-testid="stMetricLabel"] {
+                color: #262730 !important;
+            }
+            .stMarkdown {
+                color: #262730 !important;
+            }
+            input, select, textarea {
+                background-color: #ffffff !important;
+                color: #262730 !important;
+                border: 1px solid #ddd !important;
+            }
+            [data-baseweb="select"] {
+                background-color: #ffffff !important;
+            }
+            [data-baseweb="base-input"] {
+                background-color: #ffffff !important;
+            }
+            .stButton button {
+                background-color: #1f4788 !important;
+                color: white !important;
+                border: none !important;
+            }
+            .stButton button:hover {
+                background-color: #2c5aa0 !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
 
-if page == "🏡 Price Prediction":
-    st.header("📋 Property Details")
-    st.caption("Enter your property specifications below to get an instant valuation")
+# Apply current theme
+apply_theme()
+
+# Common CSS for both themes
+st.markdown("""
+    <style>
+    .prediction-card {
+        background: linear-gradient(135deg, #1f4788 0%, #2c5aa0 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        color: white !important;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        margin: 2rem 0;
+    }
+    .prediction-card h1, .prediction-card h2, .prediction-card p {
+        color: white !important;
+    }
+    .stButton button {
+        border-radius: 8px;
+        padding: 0.5rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Load model and data
+@st.cache_resource
+def load_model():
+    try:
+        with open('dubai_property_model.pkl', 'rb') as file:
+            return pickle.load(file)
+    except:
+        return None
+
+@st.cache_data
+def load_data():
+    try:
+        return pd.read_csv('dubai_properties_final.csv')
+    except:
+        return None
+
+model = load_model()
+df = load_data()
+
+# Sidebar
+with st.sidebar:
+    st.markdown("### ⚙️ Settings")
     
-    col1, col2 = st.columns(2)
+    # Dark mode toggle button
+    col1, col2 = st.columns([3, 1])
     with col1:
-        location = st.selectbox("📍 Location", ["Downtown Dubai", "Dubai Marina", "Palm Jumeirah", "Business Bay", "JBR", "Arabian Ranches"], help="Select property location")
-        bedrooms = st.slider("🛏️ Bedrooms", 1, 7, 2)
-        area = st.number_input("📐 Area (sqft)", 500, 15000, 1500, step=100)
+        st.write("Theme")
     with col2:
-        property_type = st.selectbox("🏢 Type", ["Apartment", "Villa", "Townhouse", "Penthouse"])
-        bathrooms = st.slider("🚿 Bathrooms", 1, 7, 2)
-        parking = st.slider("🚗 Parking", 0, 5, 1)
+        if st.button("🌙" if not st.session_state.dark_mode else "☀️", key="theme_toggle"):
+            st.session_state.dark_mode = not st.session_state.dark_mode
+            st.rerun()
     
-    st.markdown("### ✨ Amenities")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        has_pool = st.checkbox("🏊 Pool")
-    with col2:
-        has_gym = st.checkbox("💪 Gym")
-    with col3:
-        has_security = st.checkbox("🔒 Security")
-    with col4:
-        has_balcony = st.checkbox("🌅 Balcony")
+    st.markdown("---")
     
-    if st.button("🔮 Predict Price", type="primary", use_container_width=True):
-        with st.spinner("Analyzing..."):
-            prediction = calculate_price(location, property_type, bedrooms, bathrooms, area, parking, has_pool, has_gym, has_security, has_balcony)
-        
-        st.balloons()
-        st.success("✅ Price Prediction Complete!")
-        
-        st.markdown("---")
-        st.subheader("💰 Price Valuation")
-        
-        price_category, color = get_price_indicator(prediction)
-        st.markdown(f"<h4 style='color: {color};'>Category: {price_category}</h4>", unsafe_allow_html=True)
-        
+    # Navigation
+    st.markdown("### 🧭 Navigation")
+    page = st.radio(
+        "Select a page",
+        ["🏠 Home", "🔮 Price Predictor", "📊 Market Insights", "💰 Investment Calculator"],
+        label_visibility="collapsed"
+    )
+
+# MAIN CONTENT
+if page == "🏠 Home":
+    st.title("🏠 Dubai Real Estate Price Predictor")
+    st.markdown("### AI-Powered Property Valuation & Market Analysis")
+    
+    if df is not None:
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Predicted Price", f"AED {prediction:,.0f}")
+            st.metric("Total Properties", f"{len(df):,}")
         with col2:
-            st.metric("Price per Sqft", f"AED {prediction/area:,.0f}")
+            st.metric("Avg Price", f"AED {df['price'].mean():,.0f}")
         with col3:
-            st.metric("Lower Range", f"AED {prediction*0.9:,.0f}")
+            st.metric("Locations", df['location'].nunique())
         with col4:
-            st.metric("Upper Range", f"AED {prediction*1.1:,.0f}")
-        
-        st.markdown("---")
+            st.metric("Property Types", df['property_type'].nunique())
+    
+    st.markdown("---")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("#### 🔮 Price Prediction")
+        st.write("Get instant property valuations using ML")
+    with col2:
+        st.markdown("#### 📊 Market Insights")
+        st.write("Explore trends and analysis")
+    with col3:
+        st.markdown("#### 💰 ROI Calculator")
+        st.write("Calculate investment returns")
+
+elif page == "🔮 Price Predictor":
+    st.title("🔮 Property Price Predictor")
+    
+    if model is None or df is None:
+        st.error("Model or data not loaded")
+    else:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("📊 Price Breakdown")
-            breakdown = {'Base Price': prediction * 0.50, 'Location Premium': prediction * 0.25, 'Size & Layout': prediction * 0.15, 'Amenities': prediction * 0.10}
-            for component, value in breakdown.items():
-                st.write(f"**{component}:** AED {value:,.0f} ({(value/prediction)*100:.0f}%)")
+            location = st.selectbox("📍 Location", sorted(df['location'].unique()))
+            property_type = st.selectbox("🏢 Property Type", sorted(df['property_type'].unique()))
+            size_sqft = st.number_input("📏 Size (sq.ft)", 100, 20000, 1000, 100)
         
         with col2:
-            st.subheader("🎯 Key Metrics")
-            st.metric("Market Position", "Competitive" if prediction < 3000000 else "Premium")
-            st.metric("Est. Monthly Appreciation", f"AED {(prediction*0.05)/12:,.0f}")
+            bedrooms = st.number_input("🛏️ Bedrooms", 0, 10, 2)
+            bathrooms = st.number_input("🚿 Bathrooms", 1, 10, 2)
+            quality = st.selectbox("⭐ Quality", ['Standard', 'Premium', 'Luxury'])
         
-        st.markdown("---")
-        st.subheader("💡 Investment Insights")
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Monthly Rent", f"AED {prediction*0.00417:,.0f}")
-        with col2:
-            st.metric("Annual Rent", f"AED {prediction*0.05:,.0f}")
-        with col3:
-            st.metric("Annual Yield", "5.0%")
-        with col4:
-            st.metric("ROI Timeline", "20 years")
+        if st.button("🔮 Predict Price", use_container_width=True):
+            features = pd.DataFrame({
+                'location': [location],
+                'property_type': [property_type],
+                'size_sqft': [size_sqft],
+                'bedrooms': [bedrooms],
+                'bathrooms': [bathrooms],
+                'quality': [quality]
+            })
+            
+            predicted_price = model.predict(features)[0]
+            
+            st.markdown(f"""
+                <div class='prediction-card'>
+                    <h2>Predicted Property Price</h2>
+                    <h1 style='font-size: 3em; margin: 1rem 0;'>
+                        AED {predicted_price:,.0f}
+                    </h1>
+                    <p style='font-size: 1.2em;'>
+                        Price per sq.ft: AED {predicted_price/size_sqft:,.0f}
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Lower (-10%)", f"AED {predicted_price * 0.9:,.0f}")
+            with col2:
+                st.metric("Predicted", f"AED {predicted_price:,.0f}")
+            with col3:
+                st.metric("Upper (+10%)", f"AED {predicted_price * 1.1:,.0f}")
+
+elif page == "📊 Market Insights":
+    st.title("📊 Market Insights")
+    
+    if df is not None:
+        tab1, tab2, tab3 = st.tabs(["📈 Price Trends", "📍 Locations", "🏢 Types"])
         
-        st.markdown("---")
-        report = f"""DUBAI PROPERTY PRICE REPORT
-Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
-
-PROPERTY: {location} | {property_type}
-DETAILS: {bedrooms}BR, {bathrooms}BA, {area:,} sqft, {parking} parking
-
-PRICE VALUATION:
-- Predicted: AED {prediction:,.0f}
-- Per Sqft: AED {prediction/area:,.0f}
-- Range: AED {prediction*0.9:,.0f} - {prediction*1.1:,.0f}
-
-INVESTMENT:
-- Monthly Rent: AED {prediction*0.00417:,.0f}
-- Annual Yield: 5.0%
-- ROI: 20 years
-
-Report by Dubai Property Predictor v4.0
-"""
-        st.download_button("📥 Download Report", report, f"report_{datetime.now().strftime('%Y%m%d')}.txt", use_container_width=True)
-
-elif page == "📊 Compare Properties":
-    st.header("📊 Compare Properties")
-    st.caption("Compare 2-3 properties side-by-side")
-    
-    num = st.slider("Number of properties", 2, 3, 2)
-    properties = []
-    predictions = []
-    
-    cols = st.columns(num)
-    for i, col in enumerate(cols):
-        with col:
-            with st.expander(f"Property {i+1}", expanded=True):
-                loc = st.selectbox("Location", ["Downtown Dubai", "Dubai Marina", "Palm Jumeirah", "Business Bay", "JBR", "Arabian Ranches"], key=f"l{i}")
-                ptype = st.selectbox("Type", ["Apartment", "Villa", "Townhouse", "Penthouse"], key=f"t{i}")
-                bed = st.slider("Bedrooms", 1, 7, 2, key=f"b{i}")
-                bath = st.slider("Bathrooms", 1, 7, 2, key=f"ba{i}")
-                area = st.number_input("Area", 500, 15000, 1500, key=f"a{i}")
-                park = st.slider("Parking", 0, 5, 1, key=f"p{i}")
-                pool = st.checkbox("Pool", key=f"po{i}")
-                gym = st.checkbox("Gym", key=f"g{i}")
-                sec = st.checkbox("Security", key=f"s{i}")
-                bal = st.checkbox("Balcony", key=f"bl{i}")
-                properties.append({'location': loc, 'property_type': ptype, 'bedrooms': bed, 'bathrooms': bath, 'area': area, 'parking': park, 'has_pool': pool, 'has_gym': gym, 'has_security': sec, 'has_balcony': bal})
-    
-    if st.button("🔍 Compare", type="primary", use_container_width=True):
-        for prop in properties:
-            predictions.append(calculate_price(**prop))
+        with tab1:
+            avg_prices = df.groupby('location')['price'].mean().sort_values(ascending=False).head(10)
+            fig = px.bar(x=avg_prices.index, y=avg_prices.values,
+                        labels={'x': 'Location', 'y': 'Avg Price (AED)'},
+                        title='Top 10 Locations by Average Price',
+                        template='plotly_dark' if st.session_state.dark_mode else 'plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
         
-        st.balloons()
-        st.success("Comparison Complete!")
+        with tab2:
+            location_counts = df['location'].value_counts().head(10)
+            fig = px.pie(values=location_counts.values, names=location_counts.index,
+                        title='Top 10 Locations by Property Count',
+                        template='plotly_dark' if st.session_state.dark_mode else 'plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
         
-        st.subheader("Price Comparison")
-        cols = st.columns(num)
-        for i, (pred, col) in enumerate(zip(predictions, cols)):
-            with col:
-                cat, color = get_price_indicator(pred)
-                st.metric(f"Property {i+1}", f"AED {pred:,.0f}", delta=cat)
-        
-        st.markdown("---")
-        comparison = {'Feature': ['Location', 'Type', 'Bedrooms', 'Bathrooms', 'Area', 'Price', 'Price/Sqft']}
-        for i, (prop, pred) in enumerate(zip(properties, predictions)):
-            comparison[f'Property {i+1}'] = [prop['location'], prop['property_type'], prop['bedrooms'], prop['bathrooms'], f"{prop['area']:,}", f"AED {pred:,.0f}", f"AED {pred/prop['area']:,.0f}"]
-        st.dataframe(pd.DataFrame(comparison), hide_index=True, use_container_width=True)
-        
-        best = np.argmin([predictions[i]/properties[i]['area'] for i in range(len(predictions))])
-        st.success(f"🏆 Best Value: Property {best + 1}")
+        with tab3:
+            type_prices = df.groupby('property_type')['price'].mean().sort_values(ascending=False)
+            fig = px.bar(x=type_prices.index, y=type_prices.values,
+                        labels={'x': 'Property Type', 'y': 'Avg Price (AED)'},
+                        title='Average Price by Property Type',
+                        template='plotly_dark' if st.session_state.dark_mode else 'plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
 
-elif page == "📈 Market Insights":
-    st.header("📈 Market Insights")
+elif page == "💰 Investment Calculator":
+    st.title("💰 Investment Calculator")
     
-    tab1, tab2, tab3 = st.tabs(["Location Analysis", "Property Types", "Size Impact"])
-    
-    with tab1:
-        st.subheader("Prices by Location")
-        locs = ["Downtown Dubai", "Dubai Marina", "Palm Jumeirah", "Business Bay", "JBR", "Arabian Ranches"]
-        prices = [calculate_price(l, 'Apartment', 2, 2, 1500, 1, True, True, True, True) for l in locs]
-        df = pd.DataFrame({'Location': locs, 'Price': [f"AED {p:,.0f}" for p in prices]})
-        st.dataframe(df, hide_index=True, use_container_width=True)
-    
-    with tab2:
-        st.subheader("Property Types")
-        types = ["Apartment", "Villa", "Townhouse", "Penthouse"]
-        prices = [calculate_price('Dubai Marina', t, 3, 3, 2000, 2, True, True, True, True) for t in types]
-        df = pd.DataFrame({'Type': types, 'Price': [f"AED {p:,.0f}" for p in prices]})
-        st.dataframe(df, hide_index=True, use_container_width=True)
-    
-    with tab3:
-        st.subheader("Size Impact")
-        sizes = list(range(500, 5001, 500))
-        prices = [calculate_price('Downtown Dubai', 'Apartment', 2, 2, s, 1, True, True, True, True) for s in sizes]
-        df = pd.DataFrame({'Area (sqft)': [f"{s:,}" for s in sizes], 'Price': [f"AED {p:,.0f}" for p in prices]})
-        st.dataframe(df, hide_index=True, use_container_width=True)
-
-elif page == "ℹ️ About":
-    st.header("About This App")
-    
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("""
-        ### 🎯 Project Overview
-        Dubai Real Estate Price Predictor uses advanced algorithms for property valuation.
-        
-        ### 🔬 Tech Stack
-        - Frontend: Streamlit
-        - Data: Pandas, NumPy
-        - Deployment: Streamlit Cloud
-        
-        ### 📊 Features
-        ✅ Price predictions
-        ✅ Property comparison
-        ✅ Market insights
-        ✅ Investment calculator
-        ✅ Dark mode
-        ✅ Download reports
-        
-        ### 👨‍💻 Developer
-        **Sukesh**
-        Data Scientist | ML Engineer
-        
-        GitHub: [Sukesh1985](https://github.com/Sukesh1985)
-        """)
+        purchase_price = st.number_input("💵 Purchase Price (AED)", 100000, 50000000, 1000000, 50000)
+        annual_rent = st.number_input("🏠 Annual Rent (AED)", 10000, 5000000, 80000, 10000)
+        down_payment_pct = st.slider("💰 Down Payment %", 0, 100, 25)
     
     with col2:
-        st.info("""
-        ### 🚀 Stats
-        Locations: 6
-        Types: 4
-        Features: 15+
-        Pages: 4
-        """)
+        loan_interest = st.slider("📊 Interest Rate %", 0.0, 10.0, 4.5, 0.1)
+        loan_years = st.slider("📅 Loan Period (years)", 1, 30, 20)
+        appreciation = st.slider("📈 Annual Appreciation %", 0.0, 15.0, 5.0, 0.5)
+    
+    if st.button("💡 Calculate Returns", use_container_width=True):
+        down_payment = purchase_price * (down_payment_pct / 100)
+        loan_amount = purchase_price - down_payment
         
-        st.success("""
-        ### 📊 Status
-        ✅ Phase 1
-        ✅ Phase 2
-        ✅ Phase 3
-        ✅ Phase 4
-        """)
+        monthly_rate = (loan_interest / 100) / 12
+        num_payments = loan_years * 12
+        
+        if monthly_rate > 0:
+            monthly_payment = loan_amount * (monthly_rate * (1 + monthly_rate)**num_payments) / ((1 + monthly_rate)**num_payments - 1)
+        else:
+            monthly_payment = loan_amount / num_payments
+        
+        annual_mortgage = monthly_payment * 12
+        rental_yield = (annual_rent / purchase_price) * 100
+        net_rental_income = annual_rent - annual_mortgage
+        roi = (net_rental_income / down_payment) * 100 if down_payment > 0 else 0
+        
+        future_value = purchase_price * (1 + appreciation/100)**5
+        capital_gain = future_value - purchase_price
+        
+        st.markdown("### 📊 Investment Analysis")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Rental Yield", f"{rental_yield:.2f}%")
+        with col2:
+            st.metric("ROI", f"{roi:.2f}%")
+        with col3:
+            st.metric("Monthly Payment", f"AED {monthly_payment:,.0f}")
+        with col4:
+            st.metric("Net Annual Income", f"AED {net_rental_income:,.0f}")
+        
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(f"""
+                #### 💰 Initial Investment
+                **AED {down_payment:,.0f}**  
+                Down Payment ({down_payment_pct}%)
+            """)
+        
+        with col2:
+            st.markdown(f"""
+                #### 📈 5-Year Projection
+                **AED {capital_gain:,.0f}**  
+                Capital Appreciation ({appreciation}% annual)
+            """)
 
+# Footer
 st.markdown("---")
-st.markdown("<div style='text-align: center;'><p><strong>Phase 4:</strong> ✅ Complete | <strong>v4.0</strong></p><p style='color: #666;'>🏠 Dubai Property Predictor | Built with ❤️ using Streamlit</p></div>", unsafe_allow_html=True)
+st.markdown("""
+    <div style='text-align: center; opacity: 0.7;'>
+        <p>Built by Sukesh Singla | HR Analytics Specialist</p>
+        <p>🌐 <a href='https://sukesh1985.github.io'>Portfolio</a> | 
+           💼 <a href='https://linkedin.com/in/sukesh-singla-667701a5'>LinkedIn</a> | 
+           📧 ssingla25@gmail.com</p>
+    </div>
+""", unsafe_allow_html=True)
